@@ -1,0 +1,21 @@
+query Clients {
+  clients(pagination: {}) {
+    __typename
+    ... on PaginatedClient {
+      items {
+        id
+        name
+        city
+        state
+        is_headquarter
+        headquarter_id
+      }
+    }
+    ... on ErrorResponse {
+      fields {
+        field
+        message
+      }
+    }
+  }
+}

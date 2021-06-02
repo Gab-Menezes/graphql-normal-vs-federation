@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model client {
+  id             Int               @id @default(autoincrement())
+  name           String            @db.VarChar
+  city           String            @db.VarChar
+  headquarter_id Int?
+  created_at     DateTime          @default(now()) @db.Timestamp(6)
+  updated_at     DateTime          @updatedAt @db.Timestamp(6)
+  is_headquarter Boolean
+  state          client_state_enum
+  headquarter    client?           @relation("HeadquarterBranches", fields: [headquarter_id], references: [id])
+  branches       client[]          @relation("HeadquarterBranches")
+  orders         order[]           @relation("ClientOrder")
+}
+
+model product {
+  id             Int             @id @default(autoincrement())
+  name           String          @db.VarChar
+  created_at     DateTime        @default(now()) @db.Timestamp(6)
+  updated_at     DateTime        @updatedAt @db.Timestamp(6)
+  price          Decimal         @db.Decimal(65, 2)
+  product_orders product_order[] @relation("OrderProduct")
+}
+
+model user {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar
+  username      String   @unique @db.VarChar
+  password      String   @db.VarChar
+  token_version Int      @db.Integer @default(0)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  updated_at    DateTime @updatedAt @db.Timestamp(6)
+}
+
+model order {
+  id             Int             @id @default(autoincrement())
+  final_price    Decimal         @db.Decimal(65, 2) @default(0.00)
+  client_id      Int             @db.Integer
+  created_at     DateTime        @default(now()) @db.Timestamp(6)
+  updated_at     DateTime        @updatedAt @db.Timestamp(6)
+  client         client          @relation("ClientOrder", fields: [client_id], references: [id])
+  products_order product_order[] @relation("OrderProductOrder")
+  status         order_status_enum
+}
+
+model product_order {
+  id         Int       @id @default(autoincrement())
+  product_id Int       @db.Integer
+  order_id   Int       @db.Integer
+  amount     Int       @db.Integer
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @updatedAt @db.Timestamp(6)
+  product    product   @relation("OrderProduct", fields: [product_id], references: [id])
+  order      order     @relation("OrderProductOrder", fields: [order_id], references: [id])
+}
+
+enum client_state_enum {
+  AC
+  AL
+  AP
+  AM
+  BA
+  CE
+  DF
+  ES
+  GO
+  MA
+  MT
+  MS
+  MG
+  PA
+  PB
+  PR
+  PE
+  PI
+  RJ
+  RN
+  RS
+  RO
+  RR
+  SC
+  SP
+  SE
+  TO
+}
+
+enum order_status_enum {
+  PENDING
+  CANCELED
+  CONFIRMED
+  DELIVERED
+}
