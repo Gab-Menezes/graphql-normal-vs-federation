@@ -19,7 +19,6 @@ export type Scalars = {
 };
 
 export type Client = {
-  __typename?: 'Client';
   id: Scalars['ID'];
   name: Scalars['String'];
   city: Scalars['String'];
@@ -41,18 +40,19 @@ export type ClientInput = {
   is_headquarter: Scalars['Boolean'];
 };
 
-export type ClientResponse = Client | ErrorResponse;
+export type ClientResponse = {
+  item?: Maybe<Client>;
+  error?: Maybe<ErrorResponse>;
+};
 
 
 
 export type ErrorResponse = {
-  __typename?: 'ErrorResponse';
   fields?: Maybe<Array<FieldError>>;
   execution?: Maybe<Scalars['String']>;
 };
 
 export type FieldError = {
-  __typename?: 'FieldError';
   field: Scalars['String'];
   message: Scalars['String'];
 };
@@ -64,7 +64,6 @@ export type HeadquarterBranchInput = {
 };
 
 export type Login = {
-  __typename?: 'Login';
   access_token: Scalars['String'];
   user: User;
 };
@@ -74,10 +73,12 @@ export type LoginInput = {
   password: Scalars['String'];
 };
 
-export type LoginResponse = Login | ErrorResponse;
+export type LoginResponse = {
+  item?: Maybe<Login>;
+  error?: Maybe<ErrorResponse>;
+};
 
 export type Mutation = {
-  __typename?: 'Mutation';
   createClient: ClientResponse;
   createHeadquarterAndBranches: ClientResponse;
   deleteClient: Scalars['Boolean'];
@@ -163,7 +164,6 @@ export type MutationRevokeRefreshTokensArgs = {
 };
 
 export type Order = {
-  __typename?: 'Order';
   id: Scalars['ID'];
   final_price: Scalars['Decimal'];
   client_id: Scalars['Int'];
@@ -185,7 +185,10 @@ export type OrderInput = {
   status: Status;
 };
 
-export type OrderResponse = Order | ErrorResponse;
+export type OrderResponse = {
+  item?: Maybe<Order>;
+  error?: Maybe<ErrorResponse>;
+};
 
 export type PaginateInput = {
   offset?: Maybe<Scalars['Int']>;
@@ -194,46 +197,36 @@ export type PaginateInput = {
   orderValue?: Maybe<OrderBy>;
 };
 
-export type PaginatedClient = {
-  __typename?: 'PaginatedClient';
+export type PaginatedClientResponse = {
   items: Array<Client>;
   pagination?: Maybe<PaginetedObject>;
+  error?: Maybe<ErrorResponse>;
 };
 
-export type PaginatedOrder = {
-  __typename?: 'PaginatedOrder';
+export type PaginatedOrderResponse = {
   items: Array<Order>;
   pagination?: Maybe<PaginetedObject>;
+  error?: Maybe<ErrorResponse>;
 };
 
-export type PaginatedOrderResponse = PaginatedOrder | ErrorResponse;
-
-export type PaginatedProduct = {
-  __typename?: 'PaginatedProduct';
+export type PaginatedProductResponse = {
   items: Array<Product>;
   pagination?: Maybe<PaginetedObject>;
+  error?: Maybe<ErrorResponse>;
 };
 
-export type PaginatedProductResponse = PaginatedProduct | ErrorResponse;
-
-export type PaginationClientResponse = PaginatedClient | ErrorResponse;
-
-export type PaginationUser = {
-  __typename?: 'PaginationUser';
+export type PaginatedUserResponse = {
   items: Array<User>;
   pagination?: Maybe<PaginetedObject>;
+  error?: Maybe<ErrorResponse>;
 };
 
-export type PaginationUserResponse = PaginationUser | ErrorResponse;
-
 export type PaginetedObject = {
-  __typename?: 'PaginetedObject';
   total: Scalars['Int'];
   hasMore: Scalars['Boolean'];
 };
 
 export type Product = {
-  __typename?: 'Product';
   id: Scalars['ID'];
   name: Scalars['String'];
   price: Scalars['Decimal'];
@@ -247,7 +240,6 @@ export type ProductInput = {
 };
 
 export type ProductOrder = {
-  __typename?: 'ProductOrder';
   id: Scalars['ID'];
   product_id: Scalars['Int'];
   product: Product;
@@ -263,24 +255,26 @@ export type ProductOrderInput = {
   amount: Scalars['Int'];
 };
 
-export type ProductResponse = Product | ErrorResponse;
+export type ProductResponse = {
+  item?: Maybe<Product>;
+  error?: Maybe<ErrorResponse>;
+};
 
 export type Query = {
-  __typename?: 'Query';
-  clients: PaginationClientResponse;
+  clients: PaginatedClientResponse;
   client?: Maybe<Client>;
   orders: PaginatedOrderResponse;
   order: OrderResponse;
   products: PaginatedProductResponse;
   product: ProductResponse;
-  users: PaginationUserResponse;
+  users: PaginatedUserResponse;
   user: UserResponse;
   me: User;
 };
 
 
 export type QueryClientsArgs = {
-  pagination: PaginateInput;
+  pagination?: Maybe<PaginateInput>;
 };
 
 
@@ -290,7 +284,7 @@ export type QueryClientArgs = {
 
 
 export type QueryOrdersArgs = {
-  pagination: PaginateInput;
+  pagination?: Maybe<PaginateInput>;
   client_id?: Maybe<Scalars['Int']>;
 };
 
@@ -301,7 +295,7 @@ export type QueryOrderArgs = {
 
 
 export type QueryProductsArgs = {
-  paginate: PaginateInput;
+  paginate?: Maybe<PaginateInput>;
 };
 
 
@@ -311,7 +305,7 @@ export type QueryProductArgs = {
 
 
 export type QueryUsersArgs = {
-  pagination: PaginateInput;
+  pagination?: Maybe<PaginateInput>;
 };
 
 
@@ -365,7 +359,6 @@ export type UpdateClientInput = {
 };
 
 export type User = {
-  __typename?: 'User';
   id: Scalars['ID'];
   name: Scalars['String'];
   username: Scalars['String'];
@@ -379,7 +372,10 @@ export type UserInput = {
   password: Scalars['String'];
 };
 
-export type UserResponse = User | ErrorResponse;
+export type UserResponse = {
+  item?: Maybe<User>;
+  error?: Maybe<ErrorResponse>;
+};
 
 export type LoginMutationVariables = Exact<{
   username: Scalars['String'];
@@ -387,66 +383,29 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = (
-  { __typename?: 'Mutation' }
-  & { login: (
-    { __typename: 'Login' }
-    & Pick<Login, 'access_token'>
-    & { user: (
-      { __typename?: 'User' }
-      & Pick<User, 'id' | 'name' | 'username'>
-    ) }
-  ) | (
-    { __typename: 'ErrorResponse' }
-    & Pick<ErrorResponse, 'execution'>
-  ) }
-);
+export type LoginMutation = { login: { __typename: 'LoginResponse', item?: Maybe<{ access_token: string, user: { id: string, name: string, username: string } }>, error?: Maybe<{ execution?: Maybe<string> }> } };
 
 export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LogoutMutation = (
-  { __typename?: 'Mutation' }
-  & Pick<Mutation, 'logout'>
-);
+export type LogoutMutation = { logout: boolean };
 
 export type ClientsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ClientsQuery = (
-  { __typename?: 'Query' }
-  & { clients: (
-    { __typename: 'PaginatedClient' }
-    & { items: Array<(
-      { __typename?: 'Client' }
-      & Pick<Client, 'id' | 'name' | 'city' | 'state' | 'is_headquarter' | 'headquarter_id'>
-    )> }
-  ) | (
-    { __typename: 'ErrorResponse' }
-    & { fields?: Maybe<Array<(
-      { __typename?: 'FieldError' }
-      & Pick<FieldError, 'field' | 'message'>
-    )>> }
-  ) }
-);
+export type ClientsQuery = { clients: { items: Array<{ id: string, name: string, city: string, state: States, is_headquarter: boolean, headquarter_id?: Maybe<number>, headquarter?: Maybe<{ name: string }> }>, error?: Maybe<{ fields?: Maybe<Array<{ field: string, message: string }>> }> } };
 
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MeQuery = (
-  { __typename?: 'Query' }
-  & { me: (
-    { __typename?: 'User' }
-    & Pick<User, 'id' | 'name' | 'username'>
-  ) }
-);
+export type MeQuery = { me: { id: string, name: string, username: string } };
 
 
 export const LoginDocument = gql`
     mutation Login($username: String!, $password: String!) {
   login(input: {username: $username, password: $password}) {
     __typename
-    ... on Login {
+    item {
       access_token
       user {
         id
@@ -454,7 +413,7 @@ export const LoginDocument = gql`
         username
       }
     }
-    ... on ErrorResponse {
+    error {
       execution
     }
   }
@@ -519,19 +478,19 @@ export type LogoutMutationResult = Apollo.MutationResult<LogoutMutation>;
 export type LogoutMutationOptions = Apollo.BaseMutationOptions<LogoutMutation, LogoutMutationVariables>;
 export const ClientsDocument = gql`
     query Clients {
-  clients(pagination: {}) {
-    __typename
-    ... on PaginatedClient {
-      items {
-        id
+  clients {
+    items {
+      id
+      name
+      city
+      state
+      is_headquarter
+      headquarter_id
+      headquarter {
         name
-        city
-        state
-        is_headquarter
-        headquarter_id
       }
     }
-    ... on ErrorResponse {
+    error {
       fields {
         field
         message

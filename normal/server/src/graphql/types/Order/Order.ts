@@ -1,6 +1,6 @@
 // import { StateEnum } from "../enums/StateEnum";
 import { Field, ID, Int, ObjectType, registerEnumType } from "type-graphql";
-import { order_status_enum, Prisma } from ".prisma/client";
+import { order_status_enum, Prisma } from "@prisma/client";
 import { Client } from "../Client/Client";
 import { ProductOrder } from "../ProductOrder/ProductOrder";
 

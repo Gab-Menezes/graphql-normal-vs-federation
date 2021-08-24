@@ -1,12 +1,15 @@
-import { ArrowForwardIcon, ChevronDownIcon, HamburgerIcon } from '@chakra-ui/icons';
-import { Text, Box, Button, Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay, Flex, Heading, IconButton, Link, Menu, MenuButton, MenuList, useDisclosure, Spacer, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel } from '@chakra-ui/react';
+// import { ArrowForwardIcon, ChevronDownIcon, HamburgerIcon } from '@chakra-ui/icons';
+import { HamburgerIcon } from '@chakra-ui/icons';
+// import { Text, Box, Button, Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay, Flex, Heading, IconButton, Link, Menu, MenuButton, MenuList, useDisclosure, Spacer, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel } from '@chakra-ui/react';
+import { Accordion, Box, Button, Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay, Flex, Heading, IconButton, Link, useDisclosure } from '@chakra-ui/react';
 import React from 'react';
 import { Link as RouterLink, useHistory } from 'react-router-dom';
+import { ColorModeSwitcher } from '../ColorModeSwitcher';
 import { useLogoutMutation, useMeQuery } from '../generated/graphql';
 import auth from "../utils/Auth";
 import AccordionMenu from './AccordionMenu';
 import AccordionMenuLink from './AccordionMenuLink';
-import LinkMenuItem from './AccordionMenuLink';
+// import LinkMenuItem from './AccordionMenuLink';
 
 interface NavbarProps {
 
@@ -45,27 +48,28 @@ const Navbar: React.FC<NavbarProps> = () => {
                 </DrawerContent>
             </Drawer>
 
-            <Flex flex={1} m="auto" align="center" maxW={800}>
+            <Flex flex={1} m="auto" align="center" maxW={900}>
                 <Link as={RouterLink} to="/">
                     <Heading>Home</Heading>
                 </Link>
                 
                 <Box ml={"auto"}>
-                <Flex align="center">
-                <Box mr={4}>{data ? data.me.name: ''}</Box>
-                    <Button
-                    onClick={async () => {
-                        await logout();
-                        await client.clearStore();
-                        auth.access_token = "";
-                        history.push("/login");
-                    }}
-                    isLoading={loading}
-                    variant="link"
-                    >
+                    <Flex align="center">
+                        <Box mr={4}>{data ? data.me.name: ''}</Box>
+                        <Button
+                            onClick={async () => {
+                                await logout();
+                                await client.clearStore();
+                                auth.access_token = "";
+                                history.push("/login");
+                            }}
+                            isLoading={loading}
+                            variant="link"
+                        >
                         Logout
-                    </Button>
-                </Flex>
+                        </Button>
+                        <ColorModeSwitcher />
+                    </Flex>
                 </Box>
             </Flex>
         </Flex>

@@ -21,7 +21,9 @@ export function validateInput(input: any, validations: Joi.SchemaMap<any>): vali
     return {failed: false, errors: []}
 }
 
-export function validatePaginationInput(pagination: PaginateInput): validateInputType {    
+export function validatePaginationInput(pagination: undefined|PaginateInput): validateInputType {    
+    if (!pagination) pagination = new PaginateInput;
+    
     return validateInput(pagination, {
         offset: Joi.number().min(0).required(),
         limit: Joi.number().positive().required(),

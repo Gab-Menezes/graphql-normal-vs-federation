@@ -1,27 +1,10 @@
-import { createUnionType, ObjectType } from "type-graphql";
-import { ErrorResponse } from "../../responses/ErrorResponse";
+import NormalResponse from "../../responses/NormalResponse";
+import { ObjectType } from "type-graphql";
 import PaginatedResponse from "../../responses/PaginatedResponse";
 import { Order } from "./Order";
 
 @ObjectType()
-export class PaginatedOrder extends PaginatedResponse(Order) {}
+export class PaginatedOrderResponse extends PaginatedResponse(Order) {}
 
-export const PaginatedOrderResponse = createUnionType({
-    name: "PaginatedOrderResponse",
-    types: () => [PaginatedOrder, ErrorResponse] as const,
-    resolveType: value => {
-        if ("items" in value) return PaginatedOrder;
-        if ("execution" in value || "fields" in value) return ErrorResponse;
-        return undefined
-    }
-});
-
-export const OrderResponse = createUnionType({
-    name: "OrderResponse",
-    types: () => [Order, ErrorResponse] as const,
-    resolveType: value => {
-        if ("id" in value) return Order;
-        if ("execution" in value || "fields" in value) return ErrorResponse;
-        return undefined
-    }
-});
+@ObjectType()
+export class OrderResponse extends NormalResponse(Order) {}

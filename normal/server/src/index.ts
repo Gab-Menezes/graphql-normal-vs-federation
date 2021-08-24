@@ -15,6 +15,7 @@ import { ProductResolver } from "./graphql/types/Product/ProductResolver";
 import { UserResolver } from "./graphql/types/User/UserResolver";
 import { createAccessToken, createRefreshToken, sendRefreshToken } from './utils/Token';
 import { DecimalScalar } from "./graphql/scalars/DecimalScalar";
+import AltairFastify from 'altair-fastify-plugin';
 
 const main = async () => {
     const prisma = new PrismaClient({log: ['query']});
@@ -22,7 +23,7 @@ const main = async () => {
     app.register(cookie, {} as FastifyCookieOptions);
     app.register(fastifyCors, {
         credentials: true,
-        origin: "http://localhost:3000"
+        origin: [process.env.FRONTEND_URL, "http://localhost:3000"]
     });
 
     const schema = await buildSchema({
@@ -35,54 +36,48 @@ const main = async () => {
     //     upper: UpperCaseDirective,
     // });
 
-    
-    
-    app.post("/refresh_token", async (req, res) => {
-        const token = req.cookies.refresh_token;
-        if (!token) return res.send({ ok: false, access_token: ''});
-        let payload: any = null;
-        try {
-            payload = verify(token, process.env.SECRET_REFRESH);
-        } catch (error) {
-            return res.send({ ok: false, access_token: ''});
-        }
-
-        const user = await prisma.user.findUnique({where: {id: payload.userId}});
-        if (user === null) return res.send({ success: false, access_token: ''});
-        if (user.token_version !== payload.tokenVersion) return res.send({ success: false, access_token: ''});
-
-        sendRefreshToken(res, createRefreshToken(user));
-        return res.send({ success: true, access_token: createAccessToken(user)});
-    });
-
     app.register(mercurius, {
         schema: schema,
-        graphiql: 'playground',
         context: (req, res) => ({
-            // headquarterLoader: createHeadquarterLoader(),
             req: req,
             res: res,
             prisma: prisma
         }),
-        // errorHandler: true,
-        // errorFormatter: (result, _) => {
-        //     // context.reply
-        //     // result.data
-        //     // result.errors?.forEach((e) => e.message)
-        //     return { statusCode: 200, response: result }
-        // },
+        graphiql: false,
+        ide: false,
     });
 
-    app.listen(__port__, () => {
+    app.register(AltairFastify, {
+        path: '/altair',
+        baseURL: '/altair/',
+        endpointURL: '/graphql'
+    });
+
+    app.post("/refresh_token", async (req, res) => {
+        const token = req.cookies?.['refresh_token'];
+        if (!token) return res.send({ access_token: ''});
+        let payload: any = null;
+        try {
+            payload = verify(token, process.env.SECRET_REFRESH);
+        } catch (error) {
+            return res.send({ access_token: ''});
+        }
+
+        const user = await prisma.user.findUnique({where: {id: payload.userId}});
+        if (user === null) return res.send({ access_token: ''});
+        if (user.token_version !== payload.tokenVersion) return res.send({ access_token: ''});
+
+        sendRefreshToken(res, createRefreshToken(user));
+        return res.send({ access_token: createAccessToken(user)});
+    });
+
+    app.listen(__port__, '0.0.0.0', () => {
         console.log('server started');
     })
 };
-
-// function handle(error: FastifyError, request: FastifyRequest, reply: FastifyReply): ExecutionResult {
-//     return reply.send("dsa");
-// }
 
 main()
 .catch(err => {
     console.log(err);
 })
+

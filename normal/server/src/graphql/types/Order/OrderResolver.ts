@@ -11,7 +11,6 @@ import { OrderResponse, PaginatedOrderResponse } from "./OrderResponse";
 import { validateInput, validatePaginationInput } from "../../../utils/Validation";
 import Joi from "joi";
 
-
 @Resolver(Order)
 export class OrderResolver {
     // FieldResolvers
@@ -36,26 +35,34 @@ export class OrderResolver {
     async orders(
         @Ctx() { prisma }: ContextType,
         @Arg("client_id", () => Int, {nullable: true}) client_id: number | null,
-        @Arg("pagination", () => PaginateInput) pagination: PaginateInput): Promise<typeof PaginatedOrderResponse>
+        @Arg("pagination", () => PaginateInput, { defaultValue: new PaginateInput }) pagination: PaginateInput
+    ): Promise<PaginatedOrderResponse>
     {
         const validation = validatePaginationInput(pagination);
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return createPaginationResponse({error: {fields: validation.errors}})
         
         const id = client_id === null ? undefined : client_id;
         const paginationObj = createPaginationInput(pagination);
         const orders = await prisma.order.findMany({...paginationObj, where: {id: id}});
         const agregate = await prisma.order.aggregate({count: {_all: true}});
-        return createPaginationResponse(orders, agregate.count._all, pagination.limit);
+        return createPaginationResponse({
+            pagination: {
+                items: orders,
+                total: agregate.count._all, 
+                limit: pagination.limit
+            }
+        });
     }
 
     @Query(() => OrderResponse)
     async order(
         @Ctx() { prisma }: ContextType,
-        @Arg("id", () => Int) id: number): Promise<typeof OrderResponse>
+        @Arg("id", () => Int) id: number
+    ): Promise<OrderResponse>
     {
         const order = await prisma.order.findUnique({where: {id: id}});
-        if (order === null) return {execution: "Order not found."};
-        return order;
+        if (order === null) return {error: {execution: "Order not found."}};
+        return {item: order};
     }
 
     @Mutation(() => OrderResponse)
@@ -63,25 +70,25 @@ export class OrderResolver {
         @Ctx() { prisma }: ContextType,
         @Arg("order_input", () => OrderInput) order_input: OrderInput,
         @Arg("products_order_input", () => [ProductOrderInput]) products_order_input: [ProductOrderInput],
-    ): Promise<typeof OrderResponse>
+    ): Promise<OrderResponse>
     {
         const validation = validateInput(order_input, {
             client_id: Joi.number().required(),
             status: Joi.string().required()
         });
-        if (validation.failed) return {fields: validation.errors};
+        if (validation.failed) return {error: {fields: validation.errors}};
 
         for (const product_order of products_order_input) {
             const validation = validateInput(product_order, {
                 product_id: Joi.number().required(),
                 amount: Joi.number().positive().required()
             });
-            if (validation.failed) return {fields: validation.errors};
+            if (validation.failed) return {error: {fields: validation.errors}};
         }
 
 
         const client = await prisma.client.findUnique({where: {id: order_input.client_id}, select: {id: true}});
-        if (client === null) return {execution: "Client not found."}
+        if (client === null) return {error: {execution: "Client not found."}}
 
         products_order_input.sort((a, b) => {return a.product_id - b.product_id});
         
@@ -94,22 +101,25 @@ export class OrderResolver {
             select: {id: true, price: true},
             orderBy: {id: "asc"}
         });
-        if (products.length !== products_order_input.length) return {execution: "Not all products were found."}
-
+        if (products.length !== products_order_input.length) return {error: {execution: "Not all products were found."}}
 
         for (let i = 0; i < products_order_input.length; i++) {
-            order_input.final_price.add((products[i].price.times(products_order_input[i].amount)));
+            const amount = products_order_input[i].amount;
+            const price = products[i].price.times(amount)
+            order_input.final_price.add(price);
         }
 
-        return prisma.order.create({
-            data: {
-                ...order_input,
-                products_order: {
-                    createMany: {
-                        data: products_order_input
+        return {
+            item: await prisma.order.create({
+                data: {
+                    ...order_input,
+                    products_order: {
+                        createMany: {
+                            data: products_order_input
+                        }
                     }
                 }
-            }
-        });
+            })
+        }
     }
 }

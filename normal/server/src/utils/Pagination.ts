@@ -1,14 +1,33 @@
 import { PaginateInput } from "../graphql/inputs/PaginateInput";
+import { ErrorResponse } from "../graphql/responses/ErrorResponse";
 
-export function createPaginationResponse<T>(data: T[], total: number, limit: number)
+type PaginationResponseObj<T> = {
+    pagination?: {
+        items: T[], 
+        total: number, 
+        limit: number,
+    }
+    error?: ErrorResponse
+}
+
+export function createPaginationResponse<T>({pagination, error}: PaginationResponseObj<T>)
 {
-    return {
-        items: data.slice(0, limit), 
-        paginate: {
-            total: total, 
-            hasMore: (data.length === (limit + 1))
+    if (pagination) {
+        return {
+            items: pagination.items,
+            pagination: {
+                total: pagination.total, 
+                hasMore: (pagination.items.length === (pagination.limit + 1))
+            },
+            error
         }
-    };
+    } else {
+        return {
+            items: [],
+            pagination: null,
+            error
+        }
+    }
 }
 
 export function createPaginationInput(pagination: PaginateInput)

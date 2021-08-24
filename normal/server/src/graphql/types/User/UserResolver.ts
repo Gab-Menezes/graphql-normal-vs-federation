@@ -1,7 +1,7 @@
 import { validateInput, validatePaginationInput } from "../../../utils/Validation";
 import { Arg, Ctx, Int, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
 import { PaginateInput } from "../../inputs/PaginateInput";
-import { LoginResponse, PaginationUserResponse, UserResponse } from "./UserResponse";
+import { LoginResponse, PaginatedUserResponse, UserResponse } from "./UserResponse";
 import { ContextType } from "../../../types/ContextTypes";
 import { createPaginationInput, createPaginationResponse } from "../../../utils/Pagination";
 import { LoginInput, UserInput } from "./UserInput";
@@ -13,53 +13,62 @@ import { User } from "./User";
 
 @Resolver(User)
 export class UserResolver {
-    @Query(() => PaginationUserResponse)
+    @Query(() => PaginatedUserResponse)
     async users(
         @Ctx() { prisma }: ContextType,
-        @Arg("pagination", () => PaginateInput) pagination: PaginateInput
-    ): Promise<typeof PaginationUserResponse>
+        @Arg("pagination", () => PaginateInput, { defaultValue: new PaginateInput }) pagination: PaginateInput,
+    ): Promise<PaginatedUserResponse>
     {
         const validation = validatePaginationInput(pagination);
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return createPaginationResponse({ error: { fields: validation.errors } })
 
         const users = await prisma.user.findMany(createPaginationInput(pagination));
         const agregate = await prisma.user.aggregate({count: {_all: true}});
-        return createPaginationResponse(users, agregate.count._all, pagination.limit);
+        return createPaginationResponse({
+            pagination: {   
+                items: users, 
+                total: agregate.count._all, 
+                limit: pagination.limit
+            }
+        });
     }
 
     @Query(() => UserResponse)
     async user(
         @Ctx() { prisma }: ContextType,
-        @Arg("id", () => Int) id: number): Promise<typeof UserResponse>
+        @Arg("id", () => Int) id: number
+    ): Promise<UserResponse>
     {
         const user = await prisma.user.findUnique({where: {id}});;
-        if (user === null) return {execution: "User not found."}
-        return user;
+        if (user === null) return { error: {execution: "User not found."} }
+        return { item: user};
     }
 
     @Mutation(() => UserResponse)
     async createUser(
         @Ctx() { prisma }: ContextType,
         @Arg("input", () => UserInput) input: UserInput
-    ): Promise<typeof UserResponse>
+    ): Promise<UserResponse>
     {
         const validation = validateInput(input, {
             name: Joi.string().min(2).max(50).required(),
             username: Joi.string().min(2).max(50).required(),
             password: Joi.string().min(2).max(50).required()
         });
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return { error: { fields: validation.errors }}
 
         const user = await prisma.user.findUnique({where: {username: input.username}, select: {id: true}});
-        if (user) return {fields: [{field: "username", message: "Username already taken."}]}
+        if (user) return {error: {fields: [{field: "username", message: "Username already taken."}]}}
 
-        return prisma.user.create({
-            data: {
-                name: input.name,
-                username: input.username,
-                password: await argon2.hash(input.password)
-            }
-        });
+        return {
+            item: await prisma.user.create({
+                data: {
+                    name: input.name,
+                    username: input.username,
+                    password: await argon2.hash(input.password)
+                }
+            })
+        };
     }
 
     @Mutation(() => Boolean)
@@ -78,17 +87,17 @@ export class UserResolver {
     @Mutation(() => LoginResponse)
     async login(
         @Ctx() { prisma, res }: ContextType,
-        @Arg("input", () => LoginInput) input: LoginInput,
-    ): Promise<typeof LoginResponse>
+        @Arg("input", () => LoginInput) input: LoginInput
+    ): Promise<LoginResponse>
     {
         const user = await prisma.user.findUnique({where: {username: input.username}});
-        if (user === null) return {execution: "Invalid login."};
+        if (user === null) return { error: {execution: "Invalid login."}};
 
         const valid = await argon2.verify(user.password, input.password)
-        if (!valid) return {execution: "Invalid login."};
+        if (!valid) return {error: {execution: "Invalid login."}};
 
         sendRefreshToken(res, createRefreshToken(user));
-        return { access_token: createAccessToken(user), user: user }
+        return {item: { access_token: createAccessToken(user), user: user }}
     }
 
     @Mutation(() => Boolean)

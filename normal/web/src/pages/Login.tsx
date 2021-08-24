@@ -21,17 +21,16 @@ const Login: React.FC<LoginProps> = ({history}) => {
             initialValues={{username: '', password: ''}} 
             onSubmit={async (values) => {
                 try {
-                    const response = await login({variables: values});
-                    if (response.data?.login.__typename === "ErrorResponse") {
-                        if (response.data.login.execution)
-                            setMsg(response.data.login.execution)
-                    }
-    
-                    if (response.data?.login.__typename === "Login") {
-                        auth.access_token = response.data.login.access_token;                        
+                    const {data} = await login({variables: values});
+                    if (data?.login.error)
+                        if (data.login.error.execution)
+                            setMsg(data.login.error.execution)
+
+                    if (data?.login.item) {
+                        auth.access_token = data.login.item.access_token;                        
                         client.writeQuery<MeQuery>({
                             query: MeDocument,
-                            data: {me: response.data.login.user}
+                            data: {me: data.login.item.user}
                         });
                         history.push("/");
                     }

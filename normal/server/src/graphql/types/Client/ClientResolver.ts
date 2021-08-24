@@ -39,13 +39,21 @@ export class ClientResolver {
     @Query(() => PaginatedClientResponse)
     async clients(
         @Ctx() { prisma }: ContextType,
-        @Arg("pagination", () => PaginateInput) pagination: PaginateInput): Promise<typeof PaginatedClientResponse> {
+        @Arg("pagination", () => PaginateInput, { defaultValue: new PaginateInput }) pagination: PaginateInput)
+        : Promise<PaginatedClientResponse> 
+    {
         const validation = validatePaginationInput(pagination);
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return createPaginationResponse({error: {fields: validation.errors}});
 
         const clients = await prisma.client.findMany(createPaginationInput(pagination));
         const agregate = await prisma.client.aggregate({ count: { _all: true } });
-        return createPaginationResponse(clients, agregate.count._all, pagination.limit);
+        return createPaginationResponse({
+            pagination: {
+                items: clients, 
+                total: agregate.count._all,
+                limit: pagination.limit
+            }
+        });
     }
 
     @Query(() => Client, {nullable: true})
@@ -59,7 +67,9 @@ export class ClientResolver {
     @Mutation(() => ClientResponse)
     async createClient(
         @Ctx() { prisma }: ContextType,
-        @Arg("input", () => ClientInput) input: ClientInput): Promise<typeof ClientResponse> {        
+        @Arg("input", () => ClientInput) input: ClientInput)
+        : Promise<ClientResponse> 
+    {        
         const validation = validateInput(input, {
             name: Joi.string().min(2).max(50).required(),
             state: Joi.required(),
@@ -67,14 +77,26 @@ export class ClientResolver {
             is_headquarter: Joi.boolean().required(),
             headquarter_id: Joi.number().positive(),
         });
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return {error: {fields: validation.errors}}
 
         if (!input.is_headquarter && input.headquarter_id === undefined)
-            return {execution: "Branch without headquarter id."}
+            return {error: {execution: "Branch without headquarter id."}}
         else if (input.is_headquarter && input.headquarter_id !== undefined)
-            return {execution: "Headquarter with headquarter id."}
+            return {error: {execution: "Headquarter with headquarter id."}}
+        else if (!input.is_headquarter && input.headquarter_id) {
+            const headquarter = await prisma.client.findUnique({
+                where: {
+                    id: input.headquarter_id
+                },
+                select: {
+                    is_headquarter: true
+                }
+            });
+            if (!headquarter) return {error: {execution: "Headquarter's id not found"}};
+            if (!headquarter.is_headquarter) return {error: {execution: "Invalid headquarter id"}};
+        }
 
-        return prisma.client.create({ data: input });
+        return {item: await prisma.client.create({ data: input })};
     }
 
     @Mutation(() => ClientResponse)
@@ -82,33 +104,35 @@ export class ClientResolver {
         @Ctx() { prisma }: ContextType,
         @Arg("headquarter", () => HeadquarterBranchInput) headquarter_input: HeadquarterBranchInput,
         @Arg("branches", () => [HeadquarterBranchInput]) branches_input: [HeadquarterBranchInput]
-    ): Promise<typeof ClientResponse> {
-
+    ): Promise<ClientResponse> {        
         const validationObj = {
             name: Joi.string().min(2).max(50).required(),
             state: Joi.required(),
             city: Joi.string().min(2).max(50).required(),
+            is_headquarter: Joi.allow()
         }
         const HeadquarterValidation = validateInput(headquarter_input, validationObj);
-        if (HeadquarterValidation.failed) return {fields: HeadquarterValidation.errors}
+        if (HeadquarterValidation.failed) return {error: {fields: HeadquarterValidation.errors}}
         
         for (const branch of branches_input) {
             const BranchValidation = validateInput(branch, validationObj);
-            if (BranchValidation.failed) return {fields: BranchValidation.errors}
+            if (BranchValidation.failed) return {error: {fields: BranchValidation.errors}}
         }
 
         headquarter_input.is_headquarter = true
         for (const branch of branches_input) branch.is_headquarter = false;
-        return prisma.client.create({
-            data: {
-                ...headquarter_input, 
-                branches: {
-                    createMany: {
-                        data: branches_input
+        return {
+            item: await prisma.client.create({
+                data: {
+                    ...headquarter_input, 
+                    branches: {
+                        createMany: {
+                            data: branches_input
+                        }
                     }
                 }
-            }
-        });
+            })
+        };
     }
 
     @Mutation(() => Boolean)
@@ -135,28 +159,30 @@ export class ClientResolver {
         @Ctx() { prisma }: ContextType,
         @Arg("id", () => Int) id: number,
         @Arg("input", () => UpdateClientInput) input: UpdateClientInput
-    ): Promise<typeof ClientResponse> {
+    ): Promise<ClientResponse> {
         const validation = validateInput(input, {
             name: Joi.string().min(2).max(50),
             state: Joi.string(),
             city: Joi.string().min(2).max(50),
         });
-        if (validation.failed) return {fields: validation.errors}
+        if (validation.failed) return {error: {fields: validation.errors}}
         
         const client = await prisma.client.findUnique({where: {id: id}, select: {id: true}});
-        if (client === null) return {execution: "Client not found."};
+        if (client === null) return {error: {execution: "Client not found."}};
 
-        return prisma.client.update({
-            where: {id: id},
-            data: input
-        });
+        return {
+            item: await prisma.client.update({
+                where: {id: id},
+                data: input
+            })
+        }
     }
 
     @Mutation(() => ClientResponse)
     async changeHeadquarter(
         @Ctx() { prisma }: ContextType,
         @Arg("newId", () => Int) newId: number,
-    ): Promise<typeof ClientResponse> {
+    ): Promise<ClientResponse> {
         const client = await prisma.client.findUnique({
             where: {id: newId},
             select: {
@@ -173,9 +199,9 @@ export class ClientResolver {
                 }
             }
         });
-        if (client === null) return {execution: "Client not found."};
-        if (client.is_headquarter) return {execution: "This client it's already a headquarter."};
-        if (client.headquarter_id === null || client.headquarter === null) return {execution: "This client doesn't have a headquarter."};
+        if (client === null) return {error: {execution: "Client not found."}};
+        if (client.is_headquarter) return {error: {execution: "This client it's already a headquarter."}};
+        if (client.headquarter_id === null || client.headquarter === null) return {error: {execution: "This client doesn't have a headquarter."}};
         
         let ids: Array<number> = [];
         ids.push(client.headquarter_id);
@@ -201,6 +227,6 @@ export class ClientResolver {
             })
         ]);
 
-        return transaction[1];
+        return {item: transaction[1]};
     }
 }

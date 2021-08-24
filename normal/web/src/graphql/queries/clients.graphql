@@ -1,17 +1,17 @@
 query Clients {
-  clients(pagination: {}) {
-    __typename
-    ... on PaginatedClient {
-      items {
-        id
+  clients {
+    items {
+      id
+      name
+      city
+      state
+      is_headquarter
+      headquarter_id
+      headquarter {
         name
-        city
-        state
-        is_headquarter
-        headquarter_id
       }
     }
-    ... on ErrorResponse {
+    error {
       fields {
         field
         message

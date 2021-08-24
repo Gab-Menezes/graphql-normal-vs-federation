@@ -16,8 +16,8 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ label, children }) => {
                 </Box>
                 <AccordionIcon />
             </AccordionButton>
-            <AccordionPanel pb={4}>
-                {children}
+            <AccordionPanel>
+                    {children}
             </AccordionPanel>
         </AccordionItem>
     );

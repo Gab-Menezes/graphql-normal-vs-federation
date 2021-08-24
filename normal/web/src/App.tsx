@@ -1,15 +1,12 @@
 import { ApolloProvider } from "@apollo/client"
-// import { ChakraProvider, theme } from "@chakra-ui/react"
-import { ChakraProvider, extendTheme, Link } from "@chakra-ui/react"
-import React, { useEffect, useState } from "react"
+import { ChakraProvider, extendTheme } from "@chakra-ui/react"
+import { useEffect, useState } from "react"
 import Client from "./ApolloClient"
 import { Routes } from "./componets/Routes"
 import auth from "./utils/Auth"
 import { getRefreshRequest } from "./utils/refreshToken"
 
-
-
-export const App = () => {    
+export const App: React.FC<{}> = () => {    
     const [loading, setLoading] = useState(true);
     const theme = extendTheme({ components: { 
             Button: { baseStyle: { _focus: { boxShadow: 'none' } } },
@@ -17,6 +14,10 @@ export const App = () => {
         } 
     })
     
+    // const theme = extendTheme({
+    //     initialColorMode: "dark",
+    //     useSystemColorMode: false,
+    // });
 
     useEffect(() => {
         getRefreshRequest()

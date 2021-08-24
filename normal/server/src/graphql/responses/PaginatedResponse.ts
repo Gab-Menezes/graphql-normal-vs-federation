@@ -1,7 +1,8 @@
 import { ClassType, Field, Int, ObjectType } from "type-graphql";
+import { ErrorResponse } from "./ErrorResponse";
 
 @ObjectType()
-class PaginetedObject {
+export class PaginetedObject {
     @Field(() => Int)
     total: number;
 
@@ -16,7 +17,10 @@ export default function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
         items: TItem[];
 
         @Field(() => PaginetedObject, {nullable: true})
-        pagination?: PaginetedObject;
+        pagination?: PaginetedObject|null;
+
+        @Field(() => ErrorResponse, {nullable: true})
+        error?: ErrorResponse;
     }
     return PaginatedResponseClass;
 }

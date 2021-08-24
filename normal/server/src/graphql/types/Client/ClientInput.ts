@@ -1,6 +1,6 @@
 import { Client } from "./Client";
 import { InputType, Field, Int } from "type-graphql";
-import { client_state_enum } from ".prisma/client";
+import { client_state_enum } from "@prisma/client";
 
 @InputType()
 export class HeadquarterBranchInput implements Partial<Client> {

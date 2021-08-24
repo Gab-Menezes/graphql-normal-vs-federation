@@ -5,11 +5,9 @@ import Dashboard from "../pages/Dashboard";
 import AuthRoute from "./AuthRoute";
 import { Center, Text } from "@chakra-ui/react" 
 import Client from "../pages/Client";
-// import Navbar from "./Navbar";
 
-export const Routes = () => (
+export const Routes: React.FC<{}> = () => (
     <BrowserRouter>
-        {/* <Navbar /> */}
         <Switch>
             <Route exact={true} path="/login" component={Login}/>
 

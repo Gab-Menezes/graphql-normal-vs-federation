@@ -1,4 +1,4 @@
-import { Prisma } from ".prisma/client"
+import { Prisma } from "@prisma/client"
 import { InputType, Field } from "type-graphql"
 import { DecimalScalar } from "../../scalars/DecimalScalar"
 
