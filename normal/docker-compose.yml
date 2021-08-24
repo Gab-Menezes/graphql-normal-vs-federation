@@ -1,0 +1,45 @@
+version: "3.7"
+services:
+  db:
+    image: postgres:latest
+    volumes:
+    - pg-data:/var/lib/postgres/data
+    environment: 
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "pass"
+    ports: 
+    - 5432:5432
+    # networks: 
+    # - backend
+
+  # server-watch:
+  #   image: node-watch:1
+  #   volumes:
+  #   - ./:/home/node/app
+  #   - watch-dist:/home/node/app/dist
+  #   depends_on: 
+  #   - db
+  #   networks: 
+  #   - backend
+
+  # server-dev:
+  #   image: node:latest
+  #   working_dir: /home/node/app
+  #   volumes:
+  #   - ./:/home/node/app
+  #   - watch-dist:/home/node/app/dist
+  #   expose: 
+  #   - 4000
+  #   ports:
+  #   - 4000:4000
+  #   depends_on: 
+  #   - server-watch
+  #   networks: 
+  #   - backend
+  #   command: "yarn dev"
+  
+volumes: 
+  pg-data:
+  # watch-dist:
+# networks: 
+#   backend:
