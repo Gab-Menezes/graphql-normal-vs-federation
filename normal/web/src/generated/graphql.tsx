@@ -1,5 +1,6 @@
 import { gql } from '@apollo/client';
 import * as Apollo from '@apollo/client';
+import { FieldPolicy, FieldReadFunction, TypePolicies, TypePolicy } from '@apollo/client/cache';
 export type Maybe<T> = T | null;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
@@ -19,7 +20,7 @@ export type Scalars = {
 };
 
 export type Client = {
-  id: Scalars['ID'];
+  id: Scalars['Int'];
   name: Scalars['String'];
   city: Scalars['String'];
   state: States;
@@ -57,12 +58,6 @@ export type FieldError = {
   message: Scalars['String'];
 };
 
-export type HeadquarterBranchInput = {
-  name: Scalars['String'];
-  state: States;
-  city: Scalars['String'];
-};
-
 export type Login = {
   access_token: Scalars['String'];
   user: User;
@@ -80,7 +75,6 @@ export type LoginResponse = {
 
 export type Mutation = {
   createClient: ClientResponse;
-  createHeadquarterAndBranches: ClientResponse;
   deleteClient: Scalars['Boolean'];
   deleteClients: Scalars['Int'];
   updateClient: ClientResponse;
@@ -98,12 +92,6 @@ export type Mutation = {
 
 export type MutationCreateClientArgs = {
   input: ClientInput;
-};
-
-
-export type MutationCreateHeadquarterAndBranchesArgs = {
-  branches: Array<HeadquarterBranchInput>;
-  headquarter: HeadquarterBranchInput;
 };
 
 
@@ -174,12 +162,6 @@ export type Order = {
   updated_at: Scalars['DateTime'];
 };
 
-/** OrderBy */
-export enum OrderBy {
-  Asc = 'ASC',
-  Desc = 'DESC'
-}
-
 export type OrderInput = {
   client_id: Scalars['Int'];
   status: Status;
@@ -191,17 +173,16 @@ export type OrderResponse = {
 };
 
 export type PaginateInput = {
-  offset?: Maybe<Scalars['Int']>;
-  limit?: Maybe<Scalars['Int']>;
-  orderField?: Maybe<Scalars['String']>;
-  orderValue?: Maybe<OrderBy>;
+  cursor?: Maybe<Scalars['Int']>;
+  take?: Maybe<Scalars['Int']>;
 };
 
-export type PaginatedClientResponse = {
+export type PaginatedClient = {
   items: Array<Client>;
-  pagination?: Maybe<PaginetedObject>;
-  error?: Maybe<ErrorResponse>;
+  pagination: PaginetedObject;
 };
+
+export type PaginatedClientResponse = PaginatedClient | ErrorResponse;
 
 export type PaginatedOrderResponse = {
   items: Array<Order>;
@@ -224,6 +205,8 @@ export type PaginatedUserResponse = {
 export type PaginetedObject = {
   total: Scalars['Int'];
   hasMore: Scalars['Boolean'];
+  hasLess: Scalars['Boolean'];
+  cursor?: Maybe<Scalars['Int']>;
 };
 
 export type Product = {
@@ -383,17 +366,19 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { login: { __typename: 'LoginResponse', item?: Maybe<{ access_token: string, user: { id: string, name: string, username: string } }>, error?: Maybe<{ execution?: Maybe<string> }> } };
+export type LoginMutation = { login: { __typename: 'LoginResponse', item?: Maybe<{ access_token: string, user: { id: string, name: string, username: string } }>, error?: Maybe<{ execution?: Maybe<string>, fields?: Maybe<Array<{ field: string, message: string }>> }> } };
 
 export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
 
 
 export type LogoutMutation = { logout: boolean };
 
-export type ClientsQueryVariables = Exact<{ [key: string]: never; }>;
+export type ClientsQueryVariables = Exact<{
+  pagination?: PaginateInput;
+}>;
 
 
-export type ClientsQuery = { clients: { items: Array<{ id: string, name: string, city: string, state: States, is_headquarter: boolean, headquarter_id?: Maybe<number>, headquarter?: Maybe<{ name: string }> }>, error?: Maybe<{ fields?: Maybe<Array<{ field: string, message: string }>> }> } };
+export type ClientsQuery = { clients: { __typename: 'PaginatedClient', items: Array<{ id: number, name: string, city: string, state: States, is_headquarter: boolean, headquarter_id?: Maybe<number>, headquarter?: Maybe<{ name: string }> }>, pagination: { total: number, hasMore: boolean, hasLess: boolean, cursor?: Maybe<number> } } | { __typename: 'ErrorResponse', fields?: Maybe<Array<{ field: string, message: string }>> } };
 
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -415,6 +400,10 @@ export const LoginDocument = gql`
     }
     error {
       execution
+      fields {
+        field
+        message
+      }
     }
   }
 }
@@ -477,20 +466,29 @@ export type LogoutMutationHookResult = ReturnType<typeof useLogoutMutation>;
 export type LogoutMutationResult = Apollo.MutationResult<LogoutMutation>;
 export type LogoutMutationOptions = Apollo.BaseMutationOptions<LogoutMutation, LogoutMutationVariables>;
 export const ClientsDocument = gql`
-    query Clients {
-  clients {
-    items {
-      id
-      name
-      city
-      state
-      is_headquarter
-      headquarter_id
-      headquarter {
+    query Clients($pagination: PaginateInput! = {}) {
+  clients(pagination: $pagination) {
+    __typename
+    ... on PaginatedClient {
+      items {
+        id
         name
+        city
+        state
+        is_headquarter
+        headquarter_id
+        headquarter {
+          name
+        }
+      }
+      pagination {
+        total
+        hasMore
+        hasLess
+        cursor
       }
     }
-    error {
+    ... on ErrorResponse {
       fields {
         field
         message
@@ -512,6 +510,7 @@ export const ClientsDocument = gql`
  * @example
  * const { data, loading, error } = useClientsQuery({
  *   variables: {
+ *      pagination: // value for 'pagination'
  *   },
  * });
  */
@@ -562,3 +561,236 @@ export function useMeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MeQuery
 export type MeQueryHookResult = ReturnType<typeof useMeQuery>;
 export type MeLazyQueryHookResult = ReturnType<typeof useMeLazyQuery>;
 export type MeQueryResult = Apollo.QueryResult<MeQuery, MeQueryVariables>;
+export type ClientKeySpecifier = ('id' | 'name' | 'city' | 'state' | 'is_headquarter' | 'headquarter_id' | 'headquarter' | 'branches' | 'orders' | 'created_at' | 'updated_at' | ClientKeySpecifier)[];
+export type ClientFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	name?: FieldPolicy<any> | FieldReadFunction<any>,
+	city?: FieldPolicy<any> | FieldReadFunction<any>,
+	state?: FieldPolicy<any> | FieldReadFunction<any>,
+	is_headquarter?: FieldPolicy<any> | FieldReadFunction<any>,
+	headquarter_id?: FieldPolicy<any> | FieldReadFunction<any>,
+	headquarter?: FieldPolicy<any> | FieldReadFunction<any>,
+	branches?: FieldPolicy<any> | FieldReadFunction<any>,
+	orders?: FieldPolicy<any> | FieldReadFunction<any>,
+	created_at?: FieldPolicy<any> | FieldReadFunction<any>,
+	updated_at?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ClientResponseKeySpecifier = ('item' | 'error' | ClientResponseKeySpecifier)[];
+export type ClientResponseFieldPolicy = {
+	item?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ErrorResponseKeySpecifier = ('fields' | 'execution' | ErrorResponseKeySpecifier)[];
+export type ErrorResponseFieldPolicy = {
+	fields?: FieldPolicy<any> | FieldReadFunction<any>,
+	execution?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type FieldErrorKeySpecifier = ('field' | 'message' | FieldErrorKeySpecifier)[];
+export type FieldErrorFieldPolicy = {
+	field?: FieldPolicy<any> | FieldReadFunction<any>,
+	message?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type LoginKeySpecifier = ('access_token' | 'user' | LoginKeySpecifier)[];
+export type LoginFieldPolicy = {
+	access_token?: FieldPolicy<any> | FieldReadFunction<any>,
+	user?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type LoginResponseKeySpecifier = ('item' | 'error' | LoginResponseKeySpecifier)[];
+export type LoginResponseFieldPolicy = {
+	item?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type MutationKeySpecifier = ('createClient' | 'deleteClient' | 'deleteClients' | 'updateClient' | 'changeHeadquarter' | 'createOrder' | 'createProduct' | 'deleteProduct' | 'createUser' | 'deleteUser' | 'login' | 'logout' | 'revokeRefreshTokens' | MutationKeySpecifier)[];
+export type MutationFieldPolicy = {
+	createClient?: FieldPolicy<any> | FieldReadFunction<any>,
+	deleteClient?: FieldPolicy<any> | FieldReadFunction<any>,
+	deleteClients?: FieldPolicy<any> | FieldReadFunction<any>,
+	updateClient?: FieldPolicy<any> | FieldReadFunction<any>,
+	changeHeadquarter?: FieldPolicy<any> | FieldReadFunction<any>,
+	createOrder?: FieldPolicy<any> | FieldReadFunction<any>,
+	createProduct?: FieldPolicy<any> | FieldReadFunction<any>,
+	deleteProduct?: FieldPolicy<any> | FieldReadFunction<any>,
+	createUser?: FieldPolicy<any> | FieldReadFunction<any>,
+	deleteUser?: FieldPolicy<any> | FieldReadFunction<any>,
+	login?: FieldPolicy<any> | FieldReadFunction<any>,
+	logout?: FieldPolicy<any> | FieldReadFunction<any>,
+	revokeRefreshTokens?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type OrderKeySpecifier = ('id' | 'final_price' | 'client_id' | 'client' | 'products_order' | 'status' | 'created_at' | 'updated_at' | OrderKeySpecifier)[];
+export type OrderFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	final_price?: FieldPolicy<any> | FieldReadFunction<any>,
+	client_id?: FieldPolicy<any> | FieldReadFunction<any>,
+	client?: FieldPolicy<any> | FieldReadFunction<any>,
+	products_order?: FieldPolicy<any> | FieldReadFunction<any>,
+	status?: FieldPolicy<any> | FieldReadFunction<any>,
+	created_at?: FieldPolicy<any> | FieldReadFunction<any>,
+	updated_at?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type OrderResponseKeySpecifier = ('item' | 'error' | OrderResponseKeySpecifier)[];
+export type OrderResponseFieldPolicy = {
+	item?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type PaginatedClientKeySpecifier = ('items' | 'pagination' | PaginatedClientKeySpecifier)[];
+export type PaginatedClientFieldPolicy = {
+	items?: FieldPolicy<any> | FieldReadFunction<any>,
+	pagination?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type PaginatedOrderResponseKeySpecifier = ('items' | 'pagination' | 'error' | PaginatedOrderResponseKeySpecifier)[];
+export type PaginatedOrderResponseFieldPolicy = {
+	items?: FieldPolicy<any> | FieldReadFunction<any>,
+	pagination?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type PaginatedProductResponseKeySpecifier = ('items' | 'pagination' | 'error' | PaginatedProductResponseKeySpecifier)[];
+export type PaginatedProductResponseFieldPolicy = {
+	items?: FieldPolicy<any> | FieldReadFunction<any>,
+	pagination?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type PaginatedUserResponseKeySpecifier = ('items' | 'pagination' | 'error' | PaginatedUserResponseKeySpecifier)[];
+export type PaginatedUserResponseFieldPolicy = {
+	items?: FieldPolicy<any> | FieldReadFunction<any>,
+	pagination?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type PaginetedObjectKeySpecifier = ('total' | 'hasMore' | 'hasLess' | 'cursor' | PaginetedObjectKeySpecifier)[];
+export type PaginetedObjectFieldPolicy = {
+	total?: FieldPolicy<any> | FieldReadFunction<any>,
+	hasMore?: FieldPolicy<any> | FieldReadFunction<any>,
+	hasLess?: FieldPolicy<any> | FieldReadFunction<any>,
+	cursor?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ProductKeySpecifier = ('id' | 'name' | 'price' | 'created_at' | 'updated_at' | ProductKeySpecifier)[];
+export type ProductFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	name?: FieldPolicy<any> | FieldReadFunction<any>,
+	price?: FieldPolicy<any> | FieldReadFunction<any>,
+	created_at?: FieldPolicy<any> | FieldReadFunction<any>,
+	updated_at?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ProductOrderKeySpecifier = ('id' | 'product_id' | 'product' | 'order_id' | 'order' | 'amount' | 'created_at' | 'updated_at' | ProductOrderKeySpecifier)[];
+export type ProductOrderFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	product_id?: FieldPolicy<any> | FieldReadFunction<any>,
+	product?: FieldPolicy<any> | FieldReadFunction<any>,
+	order_id?: FieldPolicy<any> | FieldReadFunction<any>,
+	order?: FieldPolicy<any> | FieldReadFunction<any>,
+	amount?: FieldPolicy<any> | FieldReadFunction<any>,
+	created_at?: FieldPolicy<any> | FieldReadFunction<any>,
+	updated_at?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type ProductResponseKeySpecifier = ('item' | 'error' | ProductResponseKeySpecifier)[];
+export type ProductResponseFieldPolicy = {
+	item?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type QueryKeySpecifier = ('clients' | 'client' | 'orders' | 'order' | 'products' | 'product' | 'users' | 'user' | 'me' | QueryKeySpecifier)[];
+export type QueryFieldPolicy = {
+	clients?: FieldPolicy<any> | FieldReadFunction<any>,
+	client?: FieldPolicy<any> | FieldReadFunction<any>,
+	orders?: FieldPolicy<any> | FieldReadFunction<any>,
+	order?: FieldPolicy<any> | FieldReadFunction<any>,
+	products?: FieldPolicy<any> | FieldReadFunction<any>,
+	product?: FieldPolicy<any> | FieldReadFunction<any>,
+	users?: FieldPolicy<any> | FieldReadFunction<any>,
+	user?: FieldPolicy<any> | FieldReadFunction<any>,
+	me?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type UserKeySpecifier = ('id' | 'name' | 'username' | 'created_at' | 'updated_at' | UserKeySpecifier)[];
+export type UserFieldPolicy = {
+	id?: FieldPolicy<any> | FieldReadFunction<any>,
+	name?: FieldPolicy<any> | FieldReadFunction<any>,
+	username?: FieldPolicy<any> | FieldReadFunction<any>,
+	created_at?: FieldPolicy<any> | FieldReadFunction<any>,
+	updated_at?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type UserResponseKeySpecifier = ('item' | 'error' | UserResponseKeySpecifier)[];
+export type UserResponseFieldPolicy = {
+	item?: FieldPolicy<any> | FieldReadFunction<any>,
+	error?: FieldPolicy<any> | FieldReadFunction<any>
+};
+export type StrictTypedTypePolicies = {
+	Client?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ClientKeySpecifier | (() => undefined | ClientKeySpecifier),
+		fields?: ClientFieldPolicy,
+	},
+	ClientResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ClientResponseKeySpecifier | (() => undefined | ClientResponseKeySpecifier),
+		fields?: ClientResponseFieldPolicy,
+	},
+	ErrorResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ErrorResponseKeySpecifier | (() => undefined | ErrorResponseKeySpecifier),
+		fields?: ErrorResponseFieldPolicy,
+	},
+	FieldError?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | FieldErrorKeySpecifier | (() => undefined | FieldErrorKeySpecifier),
+		fields?: FieldErrorFieldPolicy,
+	},
+	Login?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | LoginKeySpecifier | (() => undefined | LoginKeySpecifier),
+		fields?: LoginFieldPolicy,
+	},
+	LoginResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | LoginResponseKeySpecifier | (() => undefined | LoginResponseKeySpecifier),
+		fields?: LoginResponseFieldPolicy,
+	},
+	Mutation?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | MutationKeySpecifier | (() => undefined | MutationKeySpecifier),
+		fields?: MutationFieldPolicy,
+	},
+	Order?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | OrderKeySpecifier | (() => undefined | OrderKeySpecifier),
+		fields?: OrderFieldPolicy,
+	},
+	OrderResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | OrderResponseKeySpecifier | (() => undefined | OrderResponseKeySpecifier),
+		fields?: OrderResponseFieldPolicy,
+	},
+	PaginatedClient?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | PaginatedClientKeySpecifier | (() => undefined | PaginatedClientKeySpecifier),
+		fields?: PaginatedClientFieldPolicy,
+	},
+	PaginatedOrderResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | PaginatedOrderResponseKeySpecifier | (() => undefined | PaginatedOrderResponseKeySpecifier),
+		fields?: PaginatedOrderResponseFieldPolicy,
+	},
+	PaginatedProductResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | PaginatedProductResponseKeySpecifier | (() => undefined | PaginatedProductResponseKeySpecifier),
+		fields?: PaginatedProductResponseFieldPolicy,
+	},
+	PaginatedUserResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | PaginatedUserResponseKeySpecifier | (() => undefined | PaginatedUserResponseKeySpecifier),
+		fields?: PaginatedUserResponseFieldPolicy,
+	},
+	PaginetedObject?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | PaginetedObjectKeySpecifier | (() => undefined | PaginetedObjectKeySpecifier),
+		fields?: PaginetedObjectFieldPolicy,
+	},
+	Product?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ProductKeySpecifier | (() => undefined | ProductKeySpecifier),
+		fields?: ProductFieldPolicy,
+	},
+	ProductOrder?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ProductOrderKeySpecifier | (() => undefined | ProductOrderKeySpecifier),
+		fields?: ProductOrderFieldPolicy,
+	},
+	ProductResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | ProductResponseKeySpecifier | (() => undefined | ProductResponseKeySpecifier),
+		fields?: ProductResponseFieldPolicy,
+	},
+	Query?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | QueryKeySpecifier | (() => undefined | QueryKeySpecifier),
+		fields?: QueryFieldPolicy,
+	},
+	User?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | UserKeySpecifier | (() => undefined | UserKeySpecifier),
+		fields?: UserFieldPolicy,
+	},
+	UserResponse?: Omit<TypePolicy, "fields" | "keyFields"> & {
+		keyFields?: false | UserResponseKeySpecifier | (() => undefined | UserResponseKeySpecifier),
+		fields?: UserResponseFieldPolicy,
+	}
+};
+export type TypedTypePolicies = StrictTypedTypePolicies & TypePolicies;

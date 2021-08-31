@@ -11,6 +11,10 @@ mutation Login($username: String!, $password: String!) {
     }
     error {
       execution
+      fields {
+        field
+        message
+      }
     }
   }
 }

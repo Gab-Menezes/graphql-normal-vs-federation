@@ -2,10 +2,11 @@ import { Box, Button, Alert, AlertIcon, AlertTitle } from '@chakra-ui/react';
 import { Formik, Form } from 'formik';
 import React, { useState } from 'react';
 import { Redirect, RouteComponentProps } from 'react-router';
-import InputField from '../componets/InputField';
+import CustomInputField from '../componets/fields/CustomInputField';
 import Wrapper from '../componets/Wrapper';
 import { MeDocument, MeQuery, useLoginMutation } from '../generated/graphql';
 import auth from '../utils/Auth';
+import { errorMap } from '../utils/errorMap';
 
 interface LoginProps extends RouteComponentProps {}
 
@@ -19,12 +20,16 @@ const Login: React.FC<LoginProps> = ({history}) => {
         <Wrapper variant="400px">
             <Formik 
             initialValues={{username: '', password: ''}} 
-            onSubmit={async (values) => {
+            onSubmit={async (values, {setErrors}) => {
                 try {
                     const {data} = await login({variables: values});
-                    if (data?.login.error)
+                    if (data?.login.error) {
                         if (data.login.error.execution)
                             setMsg(data.login.error.execution)
+
+                        if (data.login.error.fields)
+                            setErrors(errorMap(data.login.error.fields))
+                    }
 
                     if (data?.login.item) {
                         auth.access_token = data.login.item.access_token;                        
@@ -40,13 +45,13 @@ const Login: React.FC<LoginProps> = ({history}) => {
             }}>
                 {({isSubmitting}) => (
                     <Form>
-                        <InputField 
+                        <CustomInputField 
                             name="username" 
                             placeholder="username" 
                             label="Username"
                         />
                         <Box mt={4}>
-                            <InputField 
+                            <CustomInputField 
                                 name="password" 
                                 placeholder="password" 
                                 label="Password"

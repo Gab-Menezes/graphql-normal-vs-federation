@@ -1,6 +1,6 @@
 // import { StateEnum } from "../enums/StateEnum";
 import { client_state_enum } from "@prisma/client";
-import { Field, ID, Int, ObjectType, registerEnumType } from "type-graphql";
+import { Field, Int, ObjectType, registerEnumType } from "type-graphql";
 import { Order } from "../Order/Order";
 
 registerEnumType(client_state_enum, {
@@ -10,7 +10,7 @@ registerEnumType(client_state_enum, {
 
 @ObjectType()
 export class Client {
-    @Field(() => ID)
+    @Field(() => Int)
     id!: number;
 
     @Field(() => String)

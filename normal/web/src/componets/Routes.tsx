@@ -5,6 +5,7 @@ import Dashboard from "../pages/Dashboard";
 import AuthRoute from "./AuthRoute";
 import { Center, Text } from "@chakra-ui/react" 
 import Client from "../pages/Client";
+import Order from "../pages/Order";
 
 export const Routes: React.FC<{}> = () => (
     <BrowserRouter>
@@ -13,6 +14,7 @@ export const Routes: React.FC<{}> = () => (
 
             <AuthRoute exact={true} path="/" component={Dashboard}/> 
             <AuthRoute exact={true} path="/clients" component={Client}/> 
+            <AuthRoute exact={true} path="/orders" component={Order}/> 
 
             <Route path="/" render={() => {
                 return (

@@ -5,7 +5,6 @@ import { LoginResponse, PaginatedUserResponse, UserResponse } from "./UserRespon
 import { ContextType } from "../../../types/ContextTypes";
 import { createPaginationInput, createPaginationResponse } from "../../../utils/Pagination";
 import { LoginInput, UserInput } from "./UserInput";
-import Joi from "joi";
 import argon2 from "argon2"
 import { sendRefreshToken, createRefreshToken, createAccessToken, clearRefreshToken } from "../../../utils/Token";
 import { isAuthMiddleWare } from "../../middlewares/IsAuthMiddleware";
@@ -27,8 +26,8 @@ export class UserResolver {
         return createPaginationResponse({
             pagination: {   
                 items: users, 
-                total: agregate.count._all, 
-                limit: pagination.limit
+                total: agregate.count._all,
+                take: pagination.take
             }
         });
     }
@@ -50,11 +49,7 @@ export class UserResolver {
         @Arg("input", () => UserInput) input: UserInput
     ): Promise<UserResponse>
     {
-        const validation = validateInput(input, {
-            name: Joi.string().min(2).max(50).required(),
-            username: Joi.string().min(2).max(50).required(),
-            password: Joi.string().min(2).max(50).required()
-        });
+        const validation = validateInput(input);
         if (validation.failed) return { error: { fields: validation.errors }}
 
         const user = await prisma.user.findUnique({where: {username: input.username}, select: {id: true}});
@@ -90,6 +85,9 @@ export class UserResolver {
         @Arg("input", () => LoginInput) input: LoginInput
     ): Promise<LoginResponse>
     {
+        const validation = validateInput(input);
+        if (validation.failed) return { error: { fields: validation.errors }}
+        
         const user = await prisma.user.findUnique({where: {username: input.username}});
         if (user === null) return { error: {execution: "Invalid login."}};
 

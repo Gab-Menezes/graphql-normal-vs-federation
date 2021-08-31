@@ -5,7 +5,7 @@ import { ProductInput } from "./ProductInput";
 import { PaginateInput } from "../../inputs/PaginateInput";
 import { createPaginationInput, createPaginationResponse } from "../../../utils/Pagination";
 import { ContextType } from "../../../types/ContextTypes";
-import { validateInput, validatePaginationInput } from "../../../utils/Validation";
+import { validateInputManual, validatePaginationInput } from "../../../utils/Validation";
 import { PaginatedProductResponse, ProductResponse } from "./ProductResponse";
 import Joi from "joi";
 
@@ -26,7 +26,7 @@ export class ProductResolver {
             pagination: {
                 items: products, 
                 total: agregate.count._all, 
-                limit: pagination.limit
+                take: pagination.take
             }
         });
     }
@@ -48,7 +48,8 @@ export class ProductResolver {
         @Arg("input", () => ProductInput) input: ProductInput
     ): Promise<ProductResponse>
     {
-        const validation = validateInput(input, {
+        //TODO[Gabriel Menezes](2021-08-25): price is Decimal not a number
+        const validation = validateInputManual(input, {
             name: Joi.string().min(2).max(50).required(),
             price: Joi.number().positive().required()
         });

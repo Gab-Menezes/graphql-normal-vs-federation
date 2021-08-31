@@ -1,7 +1,7 @@
-import { createHttpLink, ApolloLink, ApolloClient, InMemoryCache, from, gql, Operation, NextLink } from "@apollo/client";
+import { ApolloClient, ApolloLink, createHttpLink, from, gql, InMemoryCache, NextLink, Operation } from "@apollo/client";
+import auth from "./utils/Auth";
 // import { TokenRefreshLink } from "apollo-link-token-refresh";
 import { getRefreshRequest } from "./utils/refreshToken";
-import auth from "./utils/Auth"
 
 const LOGOUT_MUTATION = gql`
     mutation Logout {

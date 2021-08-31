@@ -23,7 +23,7 @@ const main = async () => {
     app.register(cookie, {} as FastifyCookieOptions);
     app.register(fastifyCors, {
         credentials: true,
-        origin: [process.env.FRONTEND_URL, "http://localhost:3000"]
+        origin: [process.env.FRONTEND_URL]
     });
 
     const schema = await buildSchema({

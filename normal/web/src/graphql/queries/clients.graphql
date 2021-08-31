@@ -1,17 +1,26 @@
-query Clients {
-  clients {
-    items {
-      id
-      name
-      city
-      state
-      is_headquarter
-      headquarter_id
-      headquarter {
-        name
+query Clients($pagination: PaginateInput! = {}) {
+  clients(pagination: $pagination) {
+    __typename
+    ... on PaginatedClient {
+        items {
+          id
+          name
+          city
+          state
+          is_headquarter
+          headquarter_id
+          headquarter {
+            name
+          }
+        }
+        pagination {
+          total
+          hasMore
+          hasLess
+          cursor
+        }
       }
-    }
-    error {
+    ... on ErrorResponse {
       fields {
         field
         message

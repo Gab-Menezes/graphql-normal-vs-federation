@@ -8,10 +8,10 @@ export const DecimalScalar = new GraphQLScalarType({
         if (!(value instanceof Prisma.Decimal)) {
             throw new Error(`[DecimalError] Invalid argument: ${typeof value}. Expected Prisma.Decimal instance.`);
         }
-        return value.toString();
+        return value.toString()
     },
     parseValue: (value: unknown) => {
-        if (!(typeof value === "string")) {
+        if (typeof value !== "string" && typeof value !== "number") {
             throw new Error(`[DecimalError] Invalid argument: ${typeof value}. Expected string.`);
         }
         return new Prisma.Decimal(value);

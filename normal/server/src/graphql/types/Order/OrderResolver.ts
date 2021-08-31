@@ -9,7 +9,6 @@ import { ProductOrder } from "../ProductOrder/ProductOrder";
 import { Client } from "../Client/Client";
 import { OrderResponse, PaginatedOrderResponse } from "./OrderResponse";
 import { validateInput, validatePaginationInput } from "../../../utils/Validation";
-import Joi from "joi";
 
 @Resolver(Order)
 export class OrderResolver {
@@ -48,8 +47,8 @@ export class OrderResolver {
         return createPaginationResponse({
             pagination: {
                 items: orders,
-                total: agregate.count._all, 
-                limit: pagination.limit
+                total: agregate.count._all,
+                take: pagination.take
             }
         });
     }
@@ -72,17 +71,11 @@ export class OrderResolver {
         @Arg("products_order_input", () => [ProductOrderInput]) products_order_input: [ProductOrderInput],
     ): Promise<OrderResponse>
     {
-        const validation = validateInput(order_input, {
-            client_id: Joi.number().required(),
-            status: Joi.string().required()
-        });
+        const validation = validateInput(order_input);
         if (validation.failed) return {error: {fields: validation.errors}};
 
         for (const product_order of products_order_input) {
-            const validation = validateInput(product_order, {
-                product_id: Joi.number().required(),
-                amount: Joi.number().positive().required()
-            });
+            const validation = validateInput(product_order);
             if (validation.failed) return {error: {fields: validation.errors}};
         }
 

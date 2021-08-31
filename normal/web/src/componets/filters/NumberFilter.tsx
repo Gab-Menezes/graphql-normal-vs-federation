@@ -1,26 +1,18 @@
-import { Input } from '@chakra-ui/react';
-import React from 'react'
+import { FormLabel, NumberDecrementStepper, NumberIncrementStepper, NumberInput, NumberInputField, NumberInputStepper } from '@chakra-ui/react';
+import React from 'react';
 import { FilterProps } from 'react-table';
 
-const NumberFilter: React.FC<FilterProps<any>> = ({ column: { filterValue , setFilter } }) => {
+const NumberFilter: React.FC<FilterProps<any>> = ({ column: { filterValue, setFilter } }) => {    
     return (
         <>
-        <Input 
-            value={filterValue} 
-            onChange={(e) => setFilter(e.target.value)} 
-            size="xs" 
-            variant="filled"
-            borderColor="gray.700"
-            // width=""
-        />
-        <Input 
-            value={filterValue} 
-            onChange={(e) => setFilter(e.target.value)} 
-            size="xs" 
-            variant="filled"
-            borderColor="gray.700"
-            // width=""
-        />
+        <FormLabel fontSize="xs">Value</FormLabel>
+        <NumberInput>
+            <NumberInputField placeholder="Value..." value={filterValue} onChange={(e) => setFilter(e.target.value)}/>
+            <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+            </NumberInputStepper>
+        </NumberInput>
         </>
     );
 }
